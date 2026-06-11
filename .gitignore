@@ -1,0 +1,7 @@
+# Infrastructure lives outside this repo (C:\Projects\EKS_simulator_infra) —
+# keep any terraform artifacts out even if recreated here by mistake.
+terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/

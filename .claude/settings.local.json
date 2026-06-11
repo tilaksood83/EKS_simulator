@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(terraform -chdir=C:\\\\Projects\\\\EKS_simulator\\\\terraform init -backend=false)"
+      "PowerShell(terraform -chdir=C:\\\\Projects\\\\EKS_simulator\\\\terraform init -backend=false)",
+      "PowerShell(\\(Get-Content C:\\\\Projects\\\\EKS_simulator\\\\terraform\\\\domain.tf -Raw\\) -replace 'data\\\\.aws_route53_zone\\\\.main', 'aws_route53_zone.main' | Set-Content C:\\\\Projects\\\\EKS_simulator\\\\terraform\\\\domain.tf -Encoding utf8 -NoNewline; terraform -chdir=C:\\\\Projects\\\\EKS_simulator\\\\terraform fmt; terraform -chdir=C:\\\\Projects\\\\EKS_simulator\\\\terraform validate)"
     ]
   }
 }
