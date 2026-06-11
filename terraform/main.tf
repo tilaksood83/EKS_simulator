@@ -33,11 +33,6 @@ variable "app_port" {
   default     = 3000
 }
 
-variable "budget_email" {
-  description = "Email address that receives the monthly budget alert"
-  type        = string
-}
-
 provider "aws" {
   region = var.region
 }
@@ -202,26 +197,6 @@ resource "aws_ecs_service" "app" {
   deployment_circuit_breaker {
     enable   = true
     rollback = true
-  }
-}
-
-# ---------------------------------------------------------------------------
-# Cost tripwire — email alert at 80% of a $10/month budget
-# ---------------------------------------------------------------------------
-
-resource "aws_budgets_budget" "monthly" {
-  name         = "${local.name}-monthly"
-  budget_type  = "COST"
-  limit_amount = "10"
-  limit_unit   = "USD"
-  time_unit    = "MONTHLY"
-
-  notification {
-    comparison_operator        = "GREATER_THAN"
-    threshold                  = 80
-    threshold_type             = "PERCENTAGE"
-    notification_type          = "ACTUAL"
-    subscriber_email_addresses = [var.budget_email]
   }
 }
 
