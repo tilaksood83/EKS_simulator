@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(terraform -chdir=C:\\\\Projects\\\\EKS_simulator\\\\terraform init -backend=false)"
+    ]
+  }
+}
