@@ -122,7 +122,23 @@ async function handleApi(req, res, url) {
 }
 
 function serveStatic(req, res, url) {
-  let file = url.pathname === '/' ? '/index.html' : url.pathname;
+  // Solo mode runs the simulation engine in the browser; serve the same file
+  // the server itself uses so there is a single source of truth.
+  if (url.pathname === '/solo/engine.js') {
+    return fs.readFile(path.join(__dirname, 'src', 'engine.js'), (err, data) => {
+      if (err) { res.writeHead(404); return res.end('not found'); }
+      res.writeHead(200, { 'Content-Type': MIME['.js'] });
+      res.end(data);
+    });
+  }
+  let file = url.pathname;
+  if (file.endsWith('/')) {
+    file += 'index.html';
+  } else if (!path.extname(file)) {
+    // /shared -> /shared/ so the page's relative asset paths resolve
+    res.writeHead(301, { Location: file + '/' });
+    return res.end();
+  }
   file = path.normalize(file).replace(/^(\.\.[/\\])+/, '');
   const full = path.join(PUBLIC_DIR, file);
   if (!full.startsWith(PUBLIC_DIR)) {

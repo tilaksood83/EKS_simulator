@@ -3,250 +3,88 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EKS Simulator — Kubernetes Interview Prep</title>
+<title>Fun while learning — EKS Simulator</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  body { overflow: auto; }
+  .landing {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 48px 24px;
+    text-align: center;
+  }
+  .landing h1 {
+    font-size: 2.4rem;
+    margin: 0 0 6px;
+  }
+  .landing h1 .k8s { color: var(--blue); }
+  .landing .tagline {
+    color: var(--dim);
+    font-size: 1.05rem;
+    margin-bottom: 40px;
+  }
+  .modes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    text-align: left;
+  }
+  @media (max-width: 700px) { .modes { grid-template-columns: 1fr; } }
+  .mode-card {
+    display: block;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px;
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color .15s, transform .15s;
+  }
+  .mode-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .mode-card .icon { font-size: 2rem; }
+  .mode-card h2 { margin: 10px 0 8px; font-size: 1.2rem; }
+  .mode-card p { color: var(--dim); margin: 0 0 12px; line-height: 1.45; }
+  .mode-card .go { color: var(--accent); font-weight: 600; }
+  .links {
+    margin-top: 44px;
+    color: var(--dim);
+    font-size: .9rem;
+  }
+  .links a { color: var(--blue); text-decoration: none; }
+  .links a:hover { text-decoration: underline; }
+</style>
 </head>
 <body>
 
-<header id="topbar">
-  <div class="brand">
-    <span class="brand-logo">⎈</span>
-    <div>
-      <div class="brand-title">EKS Simulator</div>
-      <div class="brand-sub">Kubernetes / EKS interview prep &amp; learning</div>
-    </div>
+<div class="landing">
+  <h1>⎈ Fun while learning <span class="k8s">Kubernetes</span></h1>
+  <div class="tagline">An EKS cluster simulator for interview prep — pods, HPA, Cluster Autoscaler, chaos and all. Pick your playground:</div>
+
+  <div class="modes">
+    <a class="mode-card" href="/shared/">
+      <div class="icon">🌍</div>
+      <h2>Shared Cluster</h2>
+      <p>One live simulation for everyone on the internet, served by the backend.
+         Kill a pod and the whole world sees it die. Expect chaos from strangers —
+         that's the fun. May be slow (or down!) under heavy load, by design.</p>
+      <span class="go">Enter the shared cluster →</span>
+    </a>
+    <a class="mode-card" href="/solo/">
+      <div class="icon">🧍</div>
+      <h2>Solo Sandbox</h2>
+      <p>Your own private cluster, running 100% in your browser — same engine,
+         zero server involvement. Nobody can touch your pods, it works at any
+         speed, and it never goes down. Best for focused interview prep.</p>
+      <span class="go">Launch your own sandbox →</span>
+    </a>
   </div>
-  <div class="cluster-id">
-    <span id="cluster-name">…</span>
-    <span class="badge" id="cluster-status">…</span>
-    <span class="dim" id="cluster-meta"></span>
+
+  <div class="links">
+    Built for learning by Tilak Sood, hosted on a shoestring ☕ ·
+    <a href="https://github.com/tilaksood83/EKS_simulator" target="_blank" rel="noopener">Source on GitHub</a> ·
+    <a href="https://hub.docker.com/repository/docker/tilak83docker/eks_simulator" target="_blank" rel="noopener">Image on Docker Hub</a>
   </div>
-  <div class="clock">
-    <span class="dim">sim time</span> <b id="sim-clock">00:00</b>
-  </div>
-  <div class="speed-controls">
-    <button data-speed="0" title="Pause simulation">⏸</button>
-    <button data-speed="1" class="active" title="1 simulated second per real second">1×</button>
-    <button data-speed="2">2×</button>
-    <button data-speed="5">5×</button>
-    <button data-speed="10">10×</button>
-    <button id="btn-ff" title="Instantly advance the simulation by 60 seconds">⏩ +60s</button>
-  </div>
-  <div class="cost">
-    <span class="dim">cost</span> <b id="cost-hourly">$0.00/hr</b> <span class="dim" id="cost-total"></span>
-  </div>
-  <button id="btn-reset" class="danger" title="Reset the whole simulation to defaults">Reset</button>
-</header>
+</div>
 
-<main>
-  <!-- ============ LEFT: configuration ============ -->
-  <aside id="config-col">
-    <section class="panel">
-      <h2>⚙️ Node Group <span class="help" data-learn="nodegroup">?</span></h2>
-      <form id="form-nodegroup">
-        <label title="EC2 instance type for worker nodes. Determines each node's CPU and memory capacity (and price).">
-          Instance type <span class="help" data-learn="instanceType">?</span>
-          <select name="instanceType" id="ng-instance-type"></select>
-        </label>
-        <div class="row2">
-          <label title="Cluster Autoscaler will never go below this node count.">
-            Min nodes <span class="help" data-learn="minNodes">?</span>
-            <input name="minNodes" type="number" min="0" max="20" value="1">
-          </label>
-          <label title="Cluster Autoscaler will never go above this node count.">
-            Max nodes <span class="help" data-learn="maxNodes">?</span>
-            <input name="maxNodes" type="number" min="1" max="30" value="6">
-          </label>
-        </div>
-        <div class="row2">
-          <label title="A node whose requested resources are below this fraction of allocatable is a scale-down candidate.">
-            Scale-down threshold <span class="help" data-learn="scaleDownUtilizationThreshold">?</span>
-            <input name="scaleDownUtilizationThreshold" type="number" min="0.05" max="0.95" step="0.05" value="0.5">
-          </label>
-          <label title="How long a node must stay underutilized before the Cluster Autoscaler removes it.">
-            Scale-down delay (s) <span class="help" data-learn="scaleDownDelaySeconds">?</span>
-            <input name="scaleDownDelaySeconds" type="number" min="10" max="3600" value="60">
-          </label>
-        </div>
-        <label title="Simulated time for a new EC2 instance to launch, bootstrap and join the cluster as Ready.">
-          Node boot time (s) <span class="help" data-learn="nodeBootSeconds">?</span>
-          <input name="nodeBootSeconds" type="number" min="5" max="300" value="25">
-        </label>
-        <button type="submit">Apply node group</button>
-      </form>
-    </section>
-
-    <section class="panel">
-      <h2>📦 Deployment <span class="help" data-learn="deployment">?</span></h2>
-      <form id="form-deployment">
-        <label>Edit / create
-          <select id="dep-select"><option value="__new__">➕ new deployment…</option></select>
-        </label>
-        <label title="Deployment name (lowercase, DNS-compatible).">
-          Name
-          <input name="name" type="text" value="web-api" required pattern="[a-z0-9-]+">
-        </label>
-        <div class="row2">
-          <label title="Initial number of pod replicas. The HPA may override this while enabled.">
-            Replicas <span class="help" data-learn="replicas">?</span>
-            <input name="replicas" type="number" min="0" max="50" value="2">
-          </label>
-          <label title="Relative share of incoming traffic this deployment receives (vs other deployments).">
-            Traffic weight <span class="help" data-learn="trafficWeight">?</span>
-            <input name="trafficWeight" type="number" min="0" max="100" step="0.5" value="1">
-          </label>
-        </div>
-        <div class="row2">
-          <label title="CPU the scheduler reserves for each pod (millicores). HPA utilization % is measured against THIS value.">
-            CPU request (m) <span class="help" data-learn="cpuRequest">?</span>
-            <input name="cpuRequest" type="number" min="10" max="8000" value="250">
-          </label>
-          <label title="Hard CPU cap (millicores). Above this the container is throttled (CFS quota) — latency rises and requests get shed.">
-            CPU limit (m) <span class="help" data-learn="cpuLimit">?</span>
-            <input name="cpuLimit" type="number" min="10" max="8000" value="500">
-          </label>
-        </div>
-        <div class="row2">
-          <label title="Memory reserved per pod (MiB), used by the scheduler for bin-packing pods onto nodes.">
-            Mem request (Mi) <span class="help" data-learn="memRequest">?</span>
-            <input name="memRequest" type="number" min="16" max="16384" value="256">
-          </label>
-          <label title="Hard memory cap (MiB). Exceeding it gets the container OOMKilled and restarted.">
-            Mem limit (Mi) <span class="help" data-learn="memLimit">?</span>
-            <input name="memLimit" type="number" min="16" max="16384" value="512">
-          </label>
-        </div>
-        <div class="row2">
-          <label title="CPU the app burns when idle (millicores) — runtime, GC, health checks.">
-            Idle CPU (m) <span class="help" data-learn="baseCpu">?</span>
-            <input name="baseCpu" type="number" min="0" max="2000" value="30">
-          </label>
-          <label title="CPU cost of serving traffic: millicores consumed per 1 req/s. Higher = heavier endpoint.">
-            CPU per req/s (m) <span class="help" data-learn="cpuPerRequest">?</span>
-            <input name="cpuPerRequest" type="number" min="0.1" max="100" step="0.1" value="4">
-          </label>
-        </div>
-        <label title="Seconds from scheduling until the pod passes its readiness probe and receives traffic. This is why scale-up isn't instant!">
-          Startup time (s) <span class="help" data-learn="startupSeconds">?</span>
-          <input name="startupSeconds" type="number" min="1" max="120" value="8">
-        </label>
-
-        <h3>📈 Horizontal Pod Autoscaler <span class="help" data-learn="hpa">?</span></h3>
-        <label class="check" title="When enabled, the HPA controls the replica count based on average CPU utilization.">
-          <input name="hpaEnabled" type="checkbox" checked> HPA enabled
-        </label>
-        <div class="row2">
-          <label title="HPA never scales below this replica count.">
-            Min replicas <span class="help" data-learn="minReplicas">?</span>
-            <input name="minReplicas" type="number" min="1" max="50" value="2">
-          </label>
-          <label title="HPA never scales above this replica count.">
-            Max replicas <span class="help" data-learn="maxReplicas">?</span>
-            <input name="maxReplicas" type="number" min="1" max="100" value="10">
-          </label>
-        </div>
-        <div class="row2">
-          <label title="Target average CPU utilization as % of the CPU REQUEST. The HPA formula: desired = ceil(current × actual/target).">
-            Target CPU % <span class="help" data-learn="targetCPUUtilization">?</span>
-            <input name="targetCPUUtilization" type="number" min="10" max="95" value="60">
-          </label>
-          <label title="Minimum time between consecutive scale-up events.">
-            Scale-up cooldown (s) <span class="help" data-learn="scaleUpCooldownSeconds">?</span>
-            <input name="scaleUpCooldownSeconds" type="number" min="0" max="600" value="15">
-          </label>
-        </div>
-        <label title="Scale-down waits this long and uses the highest desired replica count seen in the window — prevents flapping/thrashing.">
-          Scale-down stabilization (s) <span class="help" data-learn="scaleDownStabilizationSeconds">?</span>
-          <input name="scaleDownStabilizationSeconds" type="number" min="0" max="1800" value="60">
-        </label>
-        <div class="row2">
-          <button type="submit" id="dep-submit">Apply deployment</button>
-          <button type="button" id="dep-delete" class="danger" hidden>Delete</button>
-        </div>
-      </form>
-    </section>
-
-    <section class="panel">
-      <h2>🚦 Load Generator <span class="help" data-learn="load">?</span></h2>
-      <label title="Sustained incoming API traffic in requests per second, split across deployments by traffic weight.">
-        Steady load: <b id="rps-label">0</b> req/s
-        <input id="rps-slider" type="range" min="0" max="1500" step="10" value="0">
-      </label>
-      <div class="row2">
-        <button id="btn-burst" title="Queue a one-off burst of API calls, drained over the next few seconds.">⚡ Burst 2,000 calls</button>
-        <button id="btn-spike" title="Add +400 req/s on top of steady load for 90 seconds — watch the HPA react.">📈 Spike +400 for 90s</button>
-      </div>
-      <div class="row2">
-        <button id="btn-ramp" title="Gradually ramp steady load to 600 req/s over 120s — a realistic morning-traffic pattern.">⛰ Ramp to 600 over 120s</button>
-        <button id="btn-wave" title="Sine-wave traffic (amplitude 300, period 240s) — watch scale up AND down cycles.">🌊 Wave ±300</button>
-      </div>
-      <button id="btn-load-stop" class="danger" title="Set steady load to 0 and cancel wave/ramp/spike.">⏹ Stop all load</button>
-      <div class="dim" id="load-status"></div>
-    </section>
-
-    <section class="panel">
-      <h2>🐒 Chaos <span class="help" data-learn="chaos">?</span></h2>
-      <button id="btn-chaos" class="danger"
-        title="Kill a random running pod (chaos-monkey style). The ReplicaSet recreates it; survivors absorb the traffic meanwhile.">💀 Kill random pod</button>
-      <div class="dim">Tip: kill pods under load and watch survivors' CPU spike while the replacement starts up. You can also kill a specific pod from its logs view.</div>
-    </section>
-  </aside>
-
-  <!-- ============ CENTER: metrics + topology ============ -->
-  <section id="main-col">
-    <div id="stat-cards">
-      <div class="stat"><div class="stat-label">Traffic</div><div class="stat-value" id="stat-rps">0</div><div class="stat-sub">req/s</div></div>
-      <div class="stat"><div class="stat-label">Avg CPU</div><div class="stat-value" id="stat-cpu">0%</div><div class="stat-sub">of request</div></div>
-      <div class="stat"><div class="stat-label">Pods</div><div class="stat-value" id="stat-pods">0</div><div class="stat-sub" id="stat-pods-sub">running</div></div>
-      <div class="stat"><div class="stat-label">Nodes</div><div class="stat-value" id="stat-nodes">0</div><div class="stat-sub" id="stat-nodes-sub">ready</div></div>
-      <div class="stat"><div class="stat-label">p99 latency</div><div class="stat-value" id="stat-p99">0ms</div><div class="stat-sub">worst deployment</div></div>
-      <div class="stat"><div class="stat-label">Errors</div><div class="stat-value" id="stat-errors">0</div><div class="stat-sub">dropped req/s</div></div>
-    </div>
-
-    <div id="charts">
-      <div class="chart-box"><div class="chart-title">Requests/s <span class="legend"><i style="background:#e8a33d"></i>load <i style="background:#e05c5c"></i>errors</span></div><canvas id="chart-rps" height="70"></canvas></div>
-      <div class="chart-box"><div class="chart-title">CPU utilization % <span class="legend"><i style="background:#4cc38a"></i>avg <i style="background:#888"></i>target</span></div><canvas id="chart-cpu" height="70"></canvas></div>
-      <div class="chart-box"><div class="chart-title">Pod replicas <span class="legend"><i style="background:#6ca0f6"></i>running <i style="background:#888"></i>desired</span></div><canvas id="chart-pods" height="70"></canvas></div>
-      <div class="chart-box"><div class="chart-title">Worker nodes <span class="legend"><i style="background:#b48ce8"></i>ready <i style="background:#888"></i>booting</span></div><canvas id="chart-nodes" height="70"></canvas></div>
-    </div>
-
-    <div id="explainer" hidden></div>
-
-    <div id="topology">
-      <div id="control-plane">
-        <div class="cp-title">🧠 EKS Control Plane <span class="dim">(AWS-managed)</span></div>
-        <div class="cp-parts">
-          <span data-comp="kube-apiserver" title="Front door of the cluster: kubectl, controllers and nodes all talk to it. AWS runs it across 3 AZs for you.&#10;&#10;click to view its logs">kube-apiserver</span>
-          <span data-comp="etcd" title="Cluster state store. On EKS you never touch it directly — AWS manages backups and scaling.&#10;&#10;click to view its logs">etcd</span>
-          <span data-comp="kube-scheduler" title="Assigns pods to nodes based on resource requests, affinity and taints.&#10;&#10;click to view its logs">kube-scheduler</span>
-          <span data-comp="kube-controller-manager" title="Runs the reconcile loops: Deployment, ReplicaSet, Node controllers and more.&#10;&#10;click to view its logs">controller-manager</span>
-          <span data-comp="hpa-controller" title="Reads metrics from the metrics-server and adjusts replica counts.&#10;&#10;click to view its logs">HPA controller</span>
-          <span data-comp="cluster-autoscaler" title="Watches for unschedulable pods and underutilized nodes; resizes EC2 Auto Scaling Groups.&#10;&#10;click to view its logs">cluster-autoscaler</span>
-        </div>
-      </div>
-      <div id="nodes-grid"></div>
-    </div>
-  </section>
-
-  <!-- ============ RIGHT: events / logs / learn ============ -->
-  <aside id="right-col">
-    <nav id="right-tabs">
-      <button data-tab="events" class="active">📋 Events</button>
-      <button data-tab="logs">📜 Pod Logs</button>
-      <button data-tab="learn">🎓 Learn</button>
-    </nav>
-    <div id="tab-events" class="tab-body"></div>
-    <div id="tab-logs" class="tab-body" hidden>
-      <select id="log-pod-select"></select>
-      <button id="btn-kill-pod" class="danger" hidden
-        title="Simulate 'kubectl delete pod' on this pod. Watch: traffic shifts to the survivors (their CPU jumps), and the ReplicaSet immediately creates a replacement — Kubernetes self-healing.">💀 Kill this pod</button>
-      <pre id="log-output">Select a pod or control-plane process (or click one in the cluster view) to stream its logs.</pre>
-    </div>
-    <div id="tab-learn" class="tab-body" hidden></div>
-  </aside>
-</main>
-
-<script src="learn.js"></script>
-<script src="app.js"></script>
 </body>
 </html>
