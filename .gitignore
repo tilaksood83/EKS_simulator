@@ -5,3 +5,6 @@ terraform/
 *.tfstate.*
 *.tfvars
 .terraform/
+
+# Claude Code local config
+.claude/
