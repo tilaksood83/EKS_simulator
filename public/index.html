@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fun while learning — EKS Simulator</title>
+<title>Fun while learning — hands-on system simulators</title>
 <link rel="stylesheet" href="style.css">
 <style>
   body { overflow: auto; }
   .landing {
-    max-width: 880px;
+    max-width: 1080px;
     margin: 0 auto;
     padding: 48px 24px;
     text-align: center;
@@ -25,7 +25,7 @@
   }
   .modes {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
     text-align: left;
   }
@@ -57,8 +57,8 @@
 <body>
 
 <div class="landing">
-  <h1>⎈ Fun while learning <span class="k8s">Kubernetes</span></h1>
-  <div class="tagline">An EKS cluster simulator for interview prep — pods, HPA, Cluster Autoscaler, chaos and all. Pick your playground:</div>
+  <h1>⎈ Fun while learning <span class="k8s">distributed systems</span></h1>
+  <div class="tagline">Hands-on simulators for the systems you usually only read about — break them, watch them heal, understand them. Pick your playground:</div>
 
   <div class="modes">
     <a class="mode-card" href="/shared/">
@@ -74,8 +74,32 @@
       <h2>Solo Sandbox</h2>
       <p>Your own private cluster, running 100% in your browser — same engine,
          zero server involvement. Nobody can touch your pods, it works at any
-         speed, and it never goes down. Best for focused interview prep.</p>
+         speed, and it never goes down. Best for focused, distraction-free practice.</p>
       <span class="go">Launch your own sandbox →</span>
+    </a>
+    <a class="mode-card" href="/incident/">
+      <div class="icon">🚨</div>
+      <h2>Incident Room</h2>
+      <p>A hidden fault is injected into a Kubernetes cluster and users are
+         complaining. Read the events, logs and charts, diagnose the root
+         cause, apply the fix and watch it heal. How long is your streak?</p>
+      <span class="go">Take the on-call shift →</span>
+    </a>
+    <a class="mode-card" href="/kafka/">
+      <div class="icon">📨</div>
+      <h2>Kafka Lag Lab</h2>
+      <p>Partitions, consumer groups and the physics of lag. Create a hot key
+         and watch one partition drown, trigger rebalancing storms, kill a
+         broker mid-stream — all in your browser.</p>
+      <span class="go">Start producing →</span>
+    </a>
+    <a class="mode-card" href="/resilience/">
+      <div class="icon">🌩</div>
+      <h2>Retry Storm</h2>
+      <p>A three-service chain where a slow database plus naive retries equals
+         a self-inflicted outage. Tune timeouts, backoff and circuit breakers
+         to ride out the storm — or cause one on purpose.</p>
+      <span class="go">Brew a storm →</span>
     </a>
   </div>
 

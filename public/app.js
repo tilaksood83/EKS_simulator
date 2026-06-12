@@ -333,7 +333,7 @@ function renderLearn() {
   for (const c of LEARN_CONCEPTS) {
     html += `<details><summary>${c.q}</summary><div class="answer">${c.a}</div></details>`;
   }
-  html += '<h3>🎤 Interview questions</h3>';
+  html += '<h3>🎤 Practice questions</h3>';
   for (const qa of INTERVIEW_QA) {
     html += `<details><summary>${qa.q}</summary><div class="answer">${qa.a}</div></details>`;
   }

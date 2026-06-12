@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resilience Simulator — Retry Storms &amp; Circuit Breakers</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  main { overflow: auto; }
+  #res-grid { display: grid; grid-template-columns: 290px 1fr 320px; gap: 12px; padding: 12px; min-height: 0; }
+  @media (max-width: 1000px) { #res-grid { grid-template-columns: 1fr; } }
+  .pipeline { display: flex; align-items: stretch; gap: 4px; margin: 10px 0; flex-wrap: wrap; }
+  .svc-box {
+    flex: 1; min-width: 130px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; font-size: .85rem;
+  }
+  .svc-box.hot { border-color: var(--amber); }
+  .svc-box.burning { border-color: var(--red); box-shadow: 0 0 8px rgba(224,92,92,.35); }
+  .svc-box h3 { margin: 0 0 6px; font-size: 1rem; }
+  .util-bar { height: 10px; background: #0a0d12; border-radius: 5px; overflow: hidden; margin: 6px 0; }
+  .util-bar i { display: block; height: 100%; background: var(--green); }
+  .util-bar i.warn { background: var(--amber); }
+  .util-bar i.bad { background: var(--red); }
+  .arrow { align-self: center; text-align: center; min-width: 64px; font-size: .75rem; color: var(--dim); }
+  .cb-badge { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: .72rem; border: 1px solid var(--border); }
+  .cb-badge.closed { color: var(--green); border-color: var(--green); }
+  .cb-badge.open { color: var(--red); border-color: var(--red); }
+  .cb-badge.half-open { color: var(--amber); border-color: var(--amber); }
+  .hop-panel label { display: block; margin: 6px 0; }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">
+    <a class="brand-logo" href="/" title="Back to home" style="text-decoration:none">🌩</a>
+    <div>
+      <div class="brand-title">Resilience Simulator</div>
+      <div class="brand-sub">Retry storms, timeouts &amp; circuit breakers — runs in your browser</div>
+    </div>
+  </div>
+  <div class="clock"><span class="dim">sim time</span> <b id="sim-clock">00:00</b></div>
+  <div class="speed-controls">
+    <button data-speed="0" title="Pause">⏸</button>
+    <button data-speed="1" class="active">1×</button>
+    <button data-speed="2">2×</button>
+    <button data-speed="5">5×</button>
+    <button data-speed="10">10×</button>
+    <button id="btn-ff" title="Advance 60 simulated seconds">⏩ +60s</button>
+  </div>
+  <button id="btn-reset" class="danger" title="Reset the simulation">Reset</button>
+</header>
+
+<main>
+<div id="res-grid">
+  <aside>
+    <section class="panel">
+      <h2>🚦 Traffic</h2>
+      <label>Client load: <b id="rps-label">300</b> req/s
+        <input id="rps-slider" type="range" min="0" max="1500" step="10" value="300">
+      </label>
+    </section>
+
+    <section class="panel hop-panel">
+      <h2>🔗 web → api policy</h2>
+      <label>Timeout: <b id="wa-timeout-label">1000</b> ms
+        <input id="wa-timeout" type="range" min="100" max="3000" step="50" value="1000"></label>
+      <label>Retries:
+        <select id="wa-retries"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></label>
+      <label>Backoff:
+        <select id="wa-backoff"><option value="none" selected>none (storm fuel)</option><option value="fixed">fixed delay</option><option value="exp">exponential</option><option value="exp+jitter">exponential + jitter</option></select></label>
+      <label class="check"><input id="wa-breaker" type="checkbox"> Circuit breaker</label>
+    </section>
+
+    <section class="panel hop-panel">
+      <h2>🔗 api → db policy</h2>
+      <label>Timeout: <b id="ad-timeout-label">1000</b> ms
+        <input id="ad-timeout" type="range" min="100" max="3000" step="50" value="1000"></label>
+      <label>Retries:
+        <select id="ad-retries"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></label>
+      <label>Backoff:
+        <select id="ad-backoff"><option value="none" selected>none (storm fuel)</option><option value="fixed">fixed delay</option><option value="exp">exponential</option><option value="exp+jitter">exponential + jitter</option></select></label>
+      <label class="check"><input id="ad-breaker" type="checkbox"> Circuit breaker</label>
+    </section>
+
+    <section class="panel">
+      <h2>🐒 Chaos</h2>
+      <div class="row2">
+        <button id="btn-db-slow" class="danger" title="Add +800ms latency to the db">🐢 DB brownout</button>
+        <button id="btn-api-err" class="danger" title="api starts failing 30% of requests">🔥 API errors 30%</button>
+      </div>
+      <button id="btn-heal">💊 Heal everything</button>
+      <label>db extra latency: <b id="dblat-label">0</b> ms
+        <input id="dblat-slider" type="range" min="0" max="2000" step="50" value="0"></label>
+      <label>api error rate: <b id="apierr-label">0</b>%
+        <input id="apierr-slider" type="range" min="0" max="80" step="5" value="0"></label>
+    </section>
+  </aside>
+
+  <section>
+    <div id="stat-cards">
+      <div class="stat"><div class="stat-label">Client success</div><div class="stat-value" id="stat-success">100%</div><div class="stat-sub">of requests</div></div>
+      <div class="stat"><div class="stat-label">End-to-end</div><div class="stat-value" id="stat-latency">75ms</div><div class="stat-sub">latency</div></div>
+      <div class="stat"><div class="stat-label">DB load</div><div class="stat-value" id="stat-dbload">0</div><div class="stat-sub" id="stat-dbload-sub">req/s</div></div>
+      <div class="stat"><div class="stat-label">Amplification</div><div class="stat-value" id="stat-amp">1.0×</div><div class="stat-sub">retry multiplier on db</div></div>
+    </div>
+
+    <div class="pipeline" id="pipeline"></div>
+
+    <div id="charts">
+      <div class="chart-box"><div class="chart-title">Client success % <span class="legend"><i style="background:#4cc38a"></i>success</span></div><canvas id="chart-success" height="70"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Load per service <span class="legend"><i style="background:#6ca0f6"></i>web <i style="background:#e8a33d"></i>api <i style="background:#e05c5c"></i>db</span></div><canvas id="chart-load" height="70"></canvas></div>
+    </div>
+  </section>
+
+  <aside>
+    <section class="panel">
+      <h2>📋 Events</h2>
+      <div id="events-box" style="max-height:42vh;overflow:auto"></div>
+    </section>
+    <section class="panel">
+      <h2>🎓 What to try</h2>
+      <details open><summary>Brew a retry storm</summary><div class="answer">Set client load ~600, retries 3 with backoff "none", then hit 🐢 DB brownout. Watch db load EXPLODE past capacity — the failures cause retries, retries cause load, load causes failures. That loop is the storm.</div></details>
+      <details><summary>Backoff is the rain</summary><div class="answer">Same storm, but switch api→db backoff to "exponential + jitter". Amplification drops and the system often recovers on its own. Jitter prevents synchronized retry waves (thundering herd).</div></details>
+      <details><summary>Breakers cut the loop</summary><div class="answer">Enable the api→db circuit breaker during a storm. It opens (fail fast), db load drops to ~0, db cools down, the half-open probe tests it, and the breaker closes. Users saw fast errors instead of hangs — and the system healed itself.</div></details>
+      <details><summary>Timeouts: too tight vs too loose</summary><div class="answer">With db at +800ms, a 500ms timeout fails everything (latency &gt; timeout); a 3000ms timeout makes users wait 3s to fail. There is no free lunch — pick timeouts from the callee's real p99.</div></details>
+    </section>
+  </aside>
+</div>
+</main>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

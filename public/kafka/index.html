@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kafka Simulator — Consumer Lag &amp; Rebalancing</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  main { overflow: auto; }
+  #kafka-grid { display: grid; grid-template-columns: 270px 1fr 320px; gap: 12px; padding: 12px; min-height: 0; }
+  @media (max-width: 1000px) { #kafka-grid { grid-template-columns: 1fr; } }
+  .partition-row {
+    display: grid; grid-template-columns: 56px 84px 110px 1fr 80px;
+    gap: 8px; align-items: center; padding: 6px 8px;
+    border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px;
+    background: var(--panel2); font-size: .85rem;
+  }
+  .partition-row.electing { border-color: var(--red); }
+  .lag-bar { height: 10px; background: #0a0d12; border-radius: 5px; overflow: hidden; }
+  .lag-bar i { display: block; height: 100%; background: var(--accent); }
+  .lag-bar i.hot { background: var(--red); }
+  .broker-chip { display: inline-block; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); margin: 0 6px 6px 0; font-size: .85rem; }
+  .broker-chip.dead { border-color: var(--red); color: var(--red); text-decoration: line-through; }
+  .broker-chip button { margin-left: 8px; font-size: .75rem; }
+  .consumer-chip { display: inline-block; padding: 3px 8px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--border); margin: 0 4px 4px 0; font-size: .8rem; }
+  .rebalance-banner { background: #3a2b14; border: 1px solid var(--accent); color: var(--accent); padding: 6px 10px; border-radius: 6px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">
+    <a class="brand-logo" href="/" title="Back to home" style="text-decoration:none">📨</a>
+    <div>
+      <div class="brand-title">Kafka Simulator</div>
+      <div class="brand-sub">Partitions, consumer lag &amp; rebalancing — runs in your browser</div>
+    </div>
+  </div>
+  <div class="clock"><span class="dim">sim time</span> <b id="sim-clock">00:00</b></div>
+  <div class="speed-controls">
+    <button data-speed="0" title="Pause">⏸</button>
+    <button data-speed="1" class="active">1×</button>
+    <button data-speed="2">2×</button>
+    <button data-speed="5">5×</button>
+    <button data-speed="10">10×</button>
+    <button id="btn-ff" title="Advance 60 simulated seconds">⏩ +60s</button>
+  </div>
+  <button id="btn-reset" class="danger" title="Reset the simulation">Reset</button>
+</header>
+
+<main>
+<div id="kafka-grid">
+  <aside>
+    <section class="panel">
+      <h2>📤 Producer</h2>
+      <label>Produce rate: <b id="rps-label">200</b> msg/s
+        <input id="rps-slider" type="range" min="0" max="2000" step="10" value="200">
+      </label>
+      <label title="0% = keys spread evenly. Higher = more traffic hits ONE hot key, landing on a single partition — the classic skew problem.">
+        Key skew: <b id="skew-label">0</b>% to one hot key
+        <input id="skew-slider" type="range" min="0" max="90" step="5" value="0">
+      </label>
+    </section>
+
+    <section class="panel">
+      <h2>🧩 Topic</h2>
+      <label title="Kafka can only ADD partitions, never remove them — just like real life.">
+        Partitions: <b id="part-label">6</b>
+        <input id="part-slider" type="range" min="1" max="12" value="6">
+      </label>
+      <div class="dim">Partitions are the unit of parallelism: more consumers than partitions = idle consumers.</div>
+    </section>
+
+    <section class="panel">
+      <h2>📥 Consumer group</h2>
+      <div class="row2">
+        <button id="btn-add-consumer">➕ Add consumer</button>
+        <button id="btn-rm-consumer" class="danger">➖ Remove</button>
+      </div>
+      <label>Per-consumer speed: <b id="cap-label">120</b> msg/s
+        <input id="cap-slider" type="range" min="20" max="600" step="10" value="120">
+      </label>
+      <div id="consumers-box"></div>
+    </section>
+
+    <section class="panel">
+      <h2>🐒 Chaos</h2>
+      <div id="brokers-box"></div>
+      <div class="dim">Kill a broker and watch its partitions lose their leader: producers error until a new leader is elected.</div>
+    </section>
+  </aside>
+
+  <section>
+    <div id="stat-cards">
+      <div class="stat"><div class="stat-label">Produce</div><div class="stat-value" id="stat-produce">0</div><div class="stat-sub">msg/s</div></div>
+      <div class="stat"><div class="stat-label">Consume</div><div class="stat-value" id="stat-consume">0</div><div class="stat-sub">msg/s</div></div>
+      <div class="stat"><div class="stat-label">Total lag</div><div class="stat-value" id="stat-lag">0</div><div class="stat-sub">messages behind</div></div>
+      <div class="stat"><div class="stat-label">Errors</div><div class="stat-value" id="stat-errors">0</div><div class="stat-sub">failed msg/s</div></div>
+    </div>
+
+    <div id="charts">
+      <div class="chart-box"><div class="chart-title">Throughput <span class="legend"><i style="background:#e8a33d"></i>produce <i style="background:#4cc38a"></i>consume</span></div><canvas id="chart-throughput" height="70"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Consumer lag <span class="legend"><i style="background:#e05c5c"></i>total messages behind</span></div><canvas id="chart-lag" height="70"></canvas></div>
+    </div>
+
+    <div id="rebalance-note"></div>
+    <div id="partitions-box" style="margin-top:8px"></div>
+  </section>
+
+  <aside>
+    <section class="panel">
+      <h2>📋 Events</h2>
+      <div id="events-box" style="max-height:46vh;overflow:auto"></div>
+    </section>
+    <section class="panel">
+      <h2>🎓 What to try</h2>
+      <details open><summary>See lag grow</summary><div class="answer">Raise produce rate above consumers × per-consumer speed. Lag climbs — that's your processing debt, measured in messages.</div></details>
+      <details><summary>The skew trap</summary><div class="answer">Set key skew to 70%. One partition's lag explodes while others stay at zero — adding consumers won't help, because a partition belongs to at most ONE consumer. Fix the keys, not the fleet.</div></details>
+      <details><summary>Rebalancing isn't free</summary><div class="answer">Add or remove a consumer during high load: ALL consumption pauses while the group rebalances, and lag jumps. This is why flapping consumers are dangerous.</div></details>
+      <details><summary>Broker failure</summary><div class="answer">Kill a broker. Its partitions reject writes until a new leader is elected, then everything heals. Replication (implied here) is why data isn't lost.</div></details>
+      <details><summary>Idle consumers</summary><div class="answer">With 6 partitions, add a 7th consumer — it sits idle. Partitions are the parallelism ceiling; plan partition counts for future scale.</div></details>
+    </section>
+  </aside>
+</div>
+</main>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

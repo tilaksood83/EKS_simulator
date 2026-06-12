@@ -62,7 +62,7 @@ const LEARN_CONCEPTS = [
     a: '<span style="color:#e8c94d">■ Pending</span> — accepted but not scheduled (often: insufficient resources). <span style="color:#6ca0f6">■ ContainerCreating</span> — scheduled; pulling image, starting, waiting for readiness probe. <span style="color:#4cc38a">■ Running</span> — ready, receiving traffic. <span style="color:#e05c5c">■ Terminating</span> — got SIGTERM, draining connections within the grace period (default 30s real-world).',
   },
   {
-    q: 'Requests vs limits — the #1 interview topic',
+    q: 'Requests vs limits — the #1 topic to master',
     a: '<b>Request</b> = scheduler reservation (drives bin-packing, CA decisions, and the denominator of HPA %). <b>Limit</b> = runtime cap (CPU → throttled, memory → OOMKilled). Request &lt; usage &lt; limit is normal (bursting). QoS classes: requests==limits → <code>Guaranteed</code>; some set → <code>Burstable</code>; none → <code>BestEffort</code> (evicted first under node pressure).',
   },
   {
