@@ -998,4 +998,10 @@ class Simulator {
   }
 }
 
-module.exports = { Simulator, INSTANCE_TYPES };
+// Dual export: Node (server.js, selftest) and browser (solo mode loads this
+// same file via /solo/engine.js — single source of truth, no copies to drift).
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { Simulator, INSTANCE_TYPES };
+} else if (typeof window !== 'undefined') {
+  window.EKS = { Simulator, INSTANCE_TYPES };
+}
