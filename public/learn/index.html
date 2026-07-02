@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guided Lessons — learn by watching it happen</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { overflow: auto; }
+  .landing { max-width: 980px; margin: 0 auto; padding: 40px 24px; }
+  .landing h1 { font-size: 2rem; margin: 0 0 6px; text-align: center; }
+  .landing h1 a { text-decoration: none; }
+  .landing .tagline { color: var(--dim); text-align: center; margin-bottom: 34px; }
+  .track { margin-bottom: 28px; }
+  .track h2 { font-size: 1.15rem; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .lesson-card {
+    display: flex; justify-content: space-between; align-items: center; gap: 14px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px; margin: 10px 0; color: var(--text); text-decoration: none;
+    transition: border-color .15s;
+  }
+  .lesson-card:hover { border-color: var(--accent); }
+  .lesson-card .name { font-weight: 600; }
+  .lesson-card .desc { color: var(--dim); font-size: .9rem; margin-top: 3px; }
+  .lesson-card .meta { color: var(--accent); white-space: nowrap; font-size: .85rem; }
+  .foot { text-align: center; color: var(--dim); margin-top: 30px; font-size: .9rem; }
+  .foot a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="landing">
+  <h1><a href="/" title="Back to home">⎈</a> Guided Lessons</h1>
+  <div class="tagline">No slides, no walls of text — each lesson drives a live simulation and only moves on when you've <i>watched the thing actually happen</i>.</div>
+
+  <div class="track">
+    <h2>⎈ Kubernetes</h2>
+    <a class="lesson-card" href="/solo/?lesson=hpa-101">
+      <div>
+        <div class="name">Why scaling is never instant</div>
+        <div class="desc">Load → CPU → HPA math → startup delay → stabilization. The whole autoscaling chain, live.</div>
+      </div>
+      <div class="meta">8 steps · ~4 min →</div>
+    </a>
+    <a class="lesson-card" href="/solo/?lesson=limits-101">
+      <div>
+        <div class="name">Requests vs limits — feel the difference</div>
+        <div class="desc">Trigger real CFS throttling, watch p99 melt while everything stays "Running", then heal it.</div>
+      </div>
+      <div class="meta">5 steps · ~3 min →</div>
+    </a>
+  </div>
+
+  <div class="track">
+    <h2>📨 Kafka</h2>
+    <a class="lesson-card" href="/kafka/?lesson=lag-101">
+      <div>
+        <div class="name">Consumer lag, skew &amp; rebalancing</div>
+        <div class="desc">Outrun your consumers, pay the rebalance tax, then meet the hot key that no fleet can fix.</div>
+      </div>
+      <div class="meta">7 steps · ~4 min →</div>
+    </a>
+  </div>
+
+  <div class="track">
+    <h2>🌩 Resilience</h2>
+    <a class="lesson-card" href="/resilience/?lesson=storm-101">
+      <div>
+        <div class="name">Anatomy of a retry storm</div>
+        <div class="desc">Cause a self-inflicted outage with three "reasonable" settings, then cut the loop with a circuit breaker.</div>
+      </div>
+      <div class="meta">7 steps · ~4 min →</div>
+    </a>
+  </div>
+
+  <div class="foot">
+    Prefer free play? Head to the <a href="/">playgrounds</a> · test yourself in the <a href="/daily/">Daily Incident</a> 🗓
+  </div>
+</div>
+
+</body>
+</html>
