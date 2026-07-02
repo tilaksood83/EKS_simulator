@@ -66,13 +66,17 @@
   }
 
   function fmtDuration(s) {
+    s = Math.max(0, Math.round(Number(s) || 0)); // stored values are untrusted
     const m = Math.floor(s / 60);
     return m > 0 ? `${m}m${String(s % 60).padStart(2, '0')}s` : `${s}s`;
   }
 
   function shareText(result) {
-    const squares = '🟥'.repeat(result.wrong) + (result.won ? '🟩' : '⬛');
-    return `🚨 Daily Incident #${puzzleNo} — ${result.won ? `diagnosed in ${result.attempts} guess${result.attempts > 1 ? 'es' : ''}, ${fmtDuration(result.seconds)}` : 'stumped me'}\n${squares}\n👉 https://learnwithts.in/daily/`;
+    // coerce stored (user-editable) values before they reach any HTML
+    const wrong = Math.min(10, Math.max(0, Math.round(Number(result.wrong) || 0)));
+    const attempts = Math.max(1, Math.round(Number(result.attempts) || 1));
+    const squares = '🟥'.repeat(wrong) + (result.won ? '🟩' : '⬛');
+    return `🚨 Daily Incident #${puzzleNo} — ${result.won ? `diagnosed in ${attempts} guess${attempts > 1 ? 'es' : ''}, ${fmtDuration(result.seconds)}` : 'stumped me'}\n${squares}\n👉 https://learnwithts.in/daily/`;
   }
 
   function countdown() {
@@ -112,7 +116,7 @@
   function renderQuiz() {
     panel.className = '';
     panel.innerHTML = `
-      <h3>🗓 Daily Incident #${puzzleNo} <span class="meta">streak: ${state.streak || 0}</span></h3>
+      <h3>🗓 Daily Incident #${puzzleNo} <span class="meta">streak: ${Math.max(0, Math.round(Number(state.streak) || 0))}</span></h3>
       <div>"${scenario.report}"</div>
       <div class="clue">💡 ${scenario.clue}</div>
       <div><b>${scenario.question}</b></div>
@@ -147,9 +151,11 @@
   }
 
   function renderDone(result) {
+    const attempts = Math.max(1, Math.round(Number(result.attempts) || 1));
+    const streak = Math.max(0, Math.round(Number(state.streak) || 0));
     panel.className = 'solved';
     panel.innerHTML = `
-      <h3>${result.won ? `✅ #${puzzleNo} solved — ${result.attempts} guess${result.attempts > 1 ? 'es' : ''}, ${fmtDuration(result.seconds)}` : `📖 Daily Incident #${puzzleNo}`} <span class="meta">streak: ${state.streak || 0}</span></h3>
+      <h3>${result.won ? `✅ #${puzzleNo} solved — ${attempts} guess${attempts > 1 ? 'es' : ''}, ${fmtDuration(result.seconds)}` : `📖 Daily Incident #${puzzleNo}`} <span class="meta">streak: ${streak}</span></h3>
       <div class="verdict">${scenario.correct}</div>
       <div class="explain">${scenario.explain}</div>
       <div class="share-box" id="daily-share-text">${shareText(result)}</div>
